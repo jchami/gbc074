@@ -7,19 +7,36 @@ class Client:
 
     def __init__(self, host, port):
         Client.setup_socket()
+        self.flag = True
         self.addr = (host, port)
 
     @classmethod
     def setup_socket(cls):
         cls._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+    def setup_threads(self):
+        input_thread = threading.Thread(name='input_thread',
+                                        target=self.send_input)
+        input_thread.start()
+        output_thread = threading.Thread(name='output_thread',
+                                         target=self.recv_output)
+        output_thread.start()
+
+        return input_thread, output_thread
+
     def send_input(self):
-        message = self.process_input()
-        self._sock.sendto(message.encode('utf-8'), self.addr)
+        while True:
+            if self.flag:
+                message = self.process_input()
+                self._sock.sendto(message.encode('utf-8'), self.addr)
+                self.flag = False
+                print(f'Sending to {self.addr}...')
 
     def recv_output(self):
-        output, address = self._sock.recvfrom(1400)
-        print(output.decode('utf-8'))
+        while True:
+            output, address = self._sock.recvfrom(1400)
+            print(output.decode('utf-8'))
+            self.flag = True
 
     def process_input(self):
         valid_ops = ['create', 'read', 'update', 'delete']
@@ -38,7 +55,6 @@ class Client:
                 break
             except ValueError:
                 pass
-            print('Invalid key value')
 
         if cmd in ['create', 'update']:
             value = input("Type a value for your key:")
