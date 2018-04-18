@@ -10,9 +10,12 @@ class Server:
         Server.setup_socket(host, port)
         self.host = host
         self.port = port
+        self.flag = True
         self.cmd_queue = Queue()
+        self.exec_queue = Queue()
+        self.log_queue = Queue()
         self.cmd_map = {}
-        self.read_log()
+        self.read_map_log()
 
     @classmethod
     def setup_socket(cls, host, port):
@@ -23,18 +26,18 @@ class Server:
         recv_thread = threading.Thread(name='recv_thread',
                                        target=self.recv_cmd)
         recv_thread.start()
-        exec_thread = threading.Thread(name='exec_thread',
-                                       target=self.exec_cmd)
+        exec_thread = threading.Thread(name='process_thread',
+                                       target=self.process_cmd)
         exec_thread.start()
 
         return recv_thread, exec_thread
 
-    def write_log(self):
+    def write_map_log(self):
         with open('map.log', 'w') as logfile:
             for key in self.cmd_map.keys():
                 logfile.write(f'{key} {self.cmd_map[key]}\n')
 
-    def read_log(self):
+    def read_map_log(self):
         with open('map.log') as logfile:
             for line in logfile:
                 line = line.split()
@@ -54,41 +57,52 @@ class Server:
 
             self.cmd_queue.put((addr, data))
 
-    def exec_cmd(self):
+    def process_cmd(self):
         while True:
-            try:
-                result = ''
-                if not self.cmd_queue.empty():
-                    dequeue = self.cmd_queue.get()
-                    flag = 0
-                    entry = dequeue[1]
-                    key = entry[1]
-                    if len(entry) > 2:
-                        value = entry[2]
-                    key_exists = self.cmd_map.get(key)
+            if not self.cmd_queue.empty():
+                next_cmd = self.cmd_queue.get()
+                self.exec_queue.put(next_cmd)
+                self.log_queue.put(next_cmd)
+                self.flag = False
+                self.exec_cmd()
 
-                    if entry[0] == 'create' and not key_exists:
-                        self.cmd_map.update({key: value})
-                        flag = 1
+    def exec_cmd(self):
+        if self.exec_queue.empty():
+            return
 
-                    if key_exists:
-                        if entry[0] == 'read':
-                            value = key_exists
-                            flag = 1
-                        elif entry[0] == 'update':
-                            self.cmd_map.update({key: value})
-                            flag = 1
-                        elif entry[0] == 'delete':
-                            value = key_exists
-                            self.cmd_map.pop(key)
-                            flag = 1
+        result = ''
+        dequeue = self.exec_queue.get()
+        success = 0
+        entry = dequeue[1]
+        key = entry[1]
+        value = ''
+        key_exists = self.cmd_map.get(key)
 
-                    if flag:
-                        result = f'success: {entry[0]} {{{key}: {value}}}'
-                    else:
-                        result = f'failed to perform {entry[0]} operation.'
-                    print(result)
-                    self._sock.sendto(result.encode('utf-8'), dequeue[0])
-                    self.write_log()
-            except Exception:
-                pass
+        if len(entry) > 2:
+            value = entry[2]
+
+        if entry[0] == 'create' and not key_exists:
+            self.cmd_map.update({key: value})
+            success = 1
+
+        if key_exists:
+            if entry[0] == 'read':
+                value = key_exists
+                success = 1
+            elif entry[0] == 'update':
+                self.cmd_map.update({key: value})
+                success = 1
+            elif entry[0] == 'delete':
+                value = key_exists
+                self.cmd_map.pop(key)
+                success = 1
+
+        log_entry = f'{entry[0]} {{{key}: {value}}}'
+        if success:
+            result = f'success: {log_entry}'
+        else:
+            result = f'failed to {entry[0]} key {key}.'
+        print(result)
+        self.flag = True
+        self._sock.sendto(result.encode('utf-8'), dequeue[0])
+        self.write_map_log()
