@@ -28,7 +28,8 @@ class Client:
         while True:
             if self.flag:
                 message = self.process_input()
-                self._sock.sendto(message.encode('utf-8'), self.addr)
+                print(message)
+                self._sock.sendto(message, self.addr)
                 self.flag = False
                 print(f'Sending to {self.addr}...')
 
@@ -39,24 +40,44 @@ class Client:
             self.flag = True
 
     def process_input(self):
+        cmd = self.process_cmd()
+        key = self.process_key()
+        value = self.process_value(cmd)
+
+        return ' '.join([cmd, key, value]).encode('utf-8')
+
+    def process_cmd(self):
+        cmd = ''
         valid_ops = ['create', 'read', 'update', 'delete']
-        cmd = key = value = ''
 
-        print('Create, Read, Update or Delete?')
+        cmd = input('Create, Read, Update or Delete?\n').lower()
         while cmd not in valid_ops:
-            cmd = input()
-            cmd = cmd.lower()
+            print('Invalid operation!')
+            cmd = input().lower()
+        return cmd
 
+    def process_key(self):
         print('Type your key:')
         while True:
             key = input()
             try:
                 int(key)
-                break
             except ValueError:
-                pass
+                print("Key must be an integer!")
 
+            size = len(key.encode('utf-8'))
+            if size <= 20:
+                key = key + (20 - size) * '0'
+                print(key)
+                return key
+            else:
+                print('Key cannot exceed 20 bytes!')
+
+    def process_value(self, cmd):
+        value = ''
         if cmd in ['create', 'update']:
             value = input("Type a value for your key:")
-
-        return ' '.join([cmd, key, value])
+        while(len(value.encode('utf-8')) > 1400):
+            print('Value cannot exceed 1400 bytes!')
+            value = input()
+        return value

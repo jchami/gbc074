@@ -64,6 +64,7 @@ class Server:
             data, addr = self._sock.recvfrom(1400)
             print(f"Receiving request from {addr}")
             data = data.decode('utf-8').split()
+            print(data)
 
             data[1] = int(data[1])
             if len(data) > 2:
