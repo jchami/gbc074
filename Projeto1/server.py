@@ -32,6 +32,20 @@ class Server:
 
         return recv_thread, exec_thread
 
+    def write_cmd_log(self, result):
+        if self.log_queue.empty():
+            return
+        req = self.log_queue.get()
+        origin = req[0]
+        cmd = req[1][0]
+        key = req[1][1]
+
+        with open('cmd.log', 'a') as cmd_log:
+            if result:
+                cmd_log.write(f'{origin}: success: {cmd} key {key}\n')
+            else:
+                cmd_log.write(f'{origin}: failed to {cmd} key {key}\n')
+
     def write_map_log(self):
         with open('map.log', 'w') as logfile:
             for key in self.cmd_map.keys():
@@ -60,11 +74,12 @@ class Server:
     def process_cmd(self):
         while True:
             if not self.cmd_queue.empty():
+                self.flag = False
                 next_cmd = self.cmd_queue.get()
                 self.exec_queue.put(next_cmd)
                 self.log_queue.put(next_cmd)
-                self.flag = False
-                self.exec_cmd()
+                result = self.exec_cmd()
+                self.write_cmd_log(result)
 
     def exec_cmd(self):
         if self.exec_queue.empty():
@@ -106,3 +121,4 @@ class Server:
         self.flag = True
         self._sock.sendto(result.encode('utf-8'), dequeue[0])
         self.write_map_log()
+        return success
