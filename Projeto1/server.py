@@ -75,12 +75,14 @@ class Server:
     def process_cmd(self):
         while True:
             if not self.cmd_queue.empty():
-                self.flag = False
-                next_cmd = self.cmd_queue.get()
-                self.exec_queue.put(next_cmd)
-                self.log_queue.put(next_cmd)
-                result = self.exec_cmd()
-                self.write_cmd_log(result)
+                return
+            self.flag = False
+            next_cmd = self.cmd_queue.get()
+            self.exec_queue.put(next_cmd)
+            self.log_queue.put(next_cmd)
+            result = self.exec_cmd()
+            self.write_cmd_log(result)
+            self.flag = True
 
     def exec_cmd(self):
         if self.exec_queue.empty():
@@ -119,7 +121,6 @@ class Server:
         else:
             result = f'failed to {entry[0]} key {key}.'
         print(result)
-        self.flag = True
         self._sock.sendto(result.encode('utf-8'), dequeue[0])
         self.write_map_log()
         return success
