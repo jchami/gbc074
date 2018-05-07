@@ -65,10 +65,9 @@ class Client:
             except ValueError:
                 print("Key must be an integer!")
 
-            size = len(key.encode('utf-8'))
-            if size <= 20:
-                key = key + (20 - size) * '0'
-                print(key)
+            # Smallest 'int' object is of size 24 bytes
+            # For that reason I am considering 24 + 20 bytes for key size check
+            if int(key) < (2 ** 150):
                 return key
             else:
                 print('Key cannot exceed 20 bytes!')
