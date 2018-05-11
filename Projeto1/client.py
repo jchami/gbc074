@@ -76,7 +76,7 @@ class Client:
         value = ''
         if cmd in ['create', 'update']:
             value = input("Type a value for your key:")
-        while(len(value.encode('utf-8')) > 1400):
+        while(len(value.encode('utf-8')) > 1450):
             print('Value cannot exceed 1400 bytes!')
             value = input()
         return value
