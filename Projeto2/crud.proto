@@ -2,16 +2,16 @@ syntax = "proto3";
 
 package helloworld;
 
-service Greeter {
-  rpc SignalUpdate (UpdateRequest) returns (UpdateReply) {}
+service Map {
+  rpc Crud (CommandRequest) returns (CommandReply) {}
 }
 
-message UpdateRequest {
+message CommandRequest {
   string name = 1;
   uint32 key = 2;
   string value = 3;
 }
 
-message UpdateReply {
+message CommandReply {
   string message = 1;
 }

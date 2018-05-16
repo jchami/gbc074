@@ -6,8 +6,8 @@ import time
 import grpc
 from concurrent import futures
 
-import signalupdate_pb2
-import signalupdate_pb2_grpc
+import crud_pb2
+import crud_pb2_grpc
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
@@ -21,7 +21,7 @@ class gRPC_server():
     @classmethod
     def setup(cls, grpc_port):
         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        signalupdate_pb2_grpc.add_GreeterServicer_to_server(Map(),
+        crud_pb2_grpc.add_MapServicer_to_server(Map(),
                                                             cls.server)
         port = f'[::]:{grpc_port}'
         cls.server.add_insecure_port(port)
@@ -141,7 +141,7 @@ class Server:
         return success
 
 
-class Map(signalupdate_pb2_grpc.GreeterServicer):
+class Map(crud_pb2_grpc.MapServicer):
     def __init__(self):
         self.cmd_map = {}
 
@@ -174,14 +174,15 @@ class Map(signalupdate_pb2_grpc.GreeterServicer):
 
         return success, result
 
-    def SignalUpdate(self, request, context):
+    def Crud(self, request, context):
         op = request.name
         key = request.key
         value = request.value
         success, result = self.exec_cmd(op, key, value)
-        return signalupdate_pb2.UpdateReply(message=result)
+        self.write_log()
+        return crud_pb2.CommandReply(message=result)
 
-    def write_log_log(self):
+    def write_log(self):
         with open('map.log', 'w') as logfile:
             for key in self.cmd_map.keys():
                 logfile.write(f'{key} {self.cmd_map[key]}\n')

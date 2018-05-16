@@ -1,8 +1,8 @@
 import json
 import grpc
 
-import signalupdate_pb2
-import signalupdate_pb2_grpc
+import crud_pb2
+import crud_pb2_grpc
 
 
 def process_value():
@@ -46,13 +46,13 @@ def run():
         name = process_cmd()
         if name in ['read', 'delete']:
             key = process_key()
-            response = stub.SignalUpdate(signalupdate_pb2.UpdateRequest(name=name, key=key))
+            response = stub.Crud(crud_pb2.CommandRequest(name=name, key=key))
         if name in ['create', 'update']:
             key = process_key()
             value = process_value()
-            response = stub.SignalUpdate(signalupdate_pb2.UpdateRequest(name=name, key=key, value=value))
+            response = stub.Crud(crud_pb2.CommandRequest(name=name, key=key, value=value))
         if name == 'track':
-            response = stub.SignalUpdate(signalupdate_pb2.UpdateRequest(name=name))
+            response = stub.Crud(crud_pb2.CommandRequest(name=name))
         if response.message:
             print(response.message)
 
@@ -64,5 +64,5 @@ if __name__ == '__main__':
 
     addr = f"{data['host']}:{data['grpc_port']}"
     channel = grpc.insecure_channel(addr)
-    stub = signalupdate_pb2_grpc.GreeterStub(channel)
+    stub = crud_pb2_grpc.MapStub(channel)
     run()
