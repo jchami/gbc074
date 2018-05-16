@@ -1,8 +1,8 @@
 import socket
 import threading
-import time
 from queue import Queue
 
+import time
 import grpc
 from concurrent import futures
 
@@ -12,60 +12,35 @@ import signalupdate_pb2_grpc
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
-class Servicer(signalupdate_pb2_grpc.GreeterServicer):
-    updates = Queue()
-
-    def SignalUpdate(self, request, context):
-        if request.name == 'read':
-            print(request.key)
-            return signalupdate_pb2.UpdateReply(message=str(request.key))
-        if request.name == 'update':
-            print(request.value)
-            return signalupdate_pb2.UpdateReply(message=str(request.value))
-        if request.name == 'delete':
-            print(request.key)
-            return signalupdate_pb2.UpdateReply(message=str(request.key))
-        if request.name == 'create':
-            print(request.value)
-            return signalupdate_pb2.UpdateReply(message=str(request.value))
-        if request.name == 'track':
-            if not Servicer.updates.empty():
-                update_msg = Servicer.updates.get()
-                return signalupdate_pb2.UpdateReply(message=update_msg)
-            else:
-                return signalupdate_pb2.UpdateReply(message='')
-
-
-class Greeter():
+class gRPC_server():
     server = None
+
+    def __init__(self, grpc_port):
+        gRPC_server.setup(grpc_port)
 
     @classmethod
     def setup(cls, grpc_port):
         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        signalupdate_pb2_grpc.add_GreeterServicer_to_server(Servicer(),
+        signalupdate_pb2_grpc.add_GreeterServicer_to_server(Map(),
                                                             cls.server)
         port = f'[::]:{grpc_port}'
         cls.server.add_insecure_port(port)
 
     def serve(self):
-        Greeter.server.start()
+        gRPC_server.server.start()
         try:
             while True:
                 time.sleep(_ONE_DAY_IN_SECONDS)
         except KeyboardInterrupt:
-            Greeter.server.stop(0)
-
-    def add_update(self, message):
-        Servicer.updates.put(message)
+            gRPC_server.server.stop(0)
 
 
 class Server:
     _sock = None
 
-    def __init__(self, host, port, grpc_port):
+    def __init__(self, host='localhost', port=8000, grpc_port=50051):
         Server.setup_socket(host, port)
-        self.grpc = Greeter()
-        Greeter.setup(grpc_port)
+        self.grpc = gRPC_server(grpc_port)
         self.host = host
         self.port = port
         self.flag = True
@@ -73,7 +48,7 @@ class Server:
         self.exec_queue = Queue()
         self.log_queue = Queue()
         self.tracked = set()
-        self.cmd_map = {}
+        self.cmd_map = Map()
         self.read_map_log()
 
     @classmethod
@@ -109,18 +84,13 @@ class Server:
             else:
                 cmd_log.write(f'{origin}: failed to {cmd} key {key}\n')
 
-    def write_map_log(self):
-        with open('map.log', 'w') as logfile:
-            for key in self.cmd_map.keys():
-                logfile.write(f'{key} {self.cmd_map[key]}\n')
-
     def read_map_log(self):
         with open('map.log') as logfile:
             for line in logfile:
                 line = line.split()
                 if len(line) >= 2:
                     line[1] = ' '.join([i for i in line if line.index(i) > 0])
-                self.cmd_map.update({int(line[0]): line[1]})
+                self.cmd_map.cmd_map.update({int(line[0]): line[1]})
 
     def recv_cmd(self):
         while True:
@@ -161,14 +131,19 @@ class Server:
         operation = entry[0]
         key = entry[1]
         value = entry[2] if len(entry) > 2 else ''
-        success, result = self.exec_cmd(operation, key, value)
+        success, result = self.cmd_map.exec_cmd(operation, key, value)
         print(result)
 
         if key in self.tracked:
             self.grpc.add_update(result)
         self._sock.sendto(result.encode('utf-8'), origin)
-        self.write_map_log()
+        self.cmd_map.write_log()
         return success
+
+
+class Map(signalupdate_pb2_grpc.GreeterServicer):
+    def __init__(self):
+        self.cmd_map = {}
 
     def exec_cmd(self, operation, key, value):
         key_in_map = self.cmd_map.get(key)
@@ -198,3 +173,15 @@ class Server:
             result = f'failed to {operation} key {key}.'
 
         return success, result
+
+    def SignalUpdate(self, request, context):
+        op = request.name
+        key = request.key
+        value = request.value
+        success, result = self.exec_cmd(op, key, value)
+        return signalupdate_pb2.UpdateReply(message=result)
+
+    def write_log_log(self):
+        with open('map.log', 'w') as logfile:
+            for key in self.cmd_map.keys():
+                logfile.write(f'{key} {self.cmd_map[key]}\n')

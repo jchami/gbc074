@@ -8,7 +8,7 @@ service Greeter {
 
 message UpdateRequest {
   string name = 1;
-  float key = 2;
+  uint32 key = 2;
   string value = 3;
 }
 
