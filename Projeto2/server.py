@@ -1,50 +1,50 @@
 import socket
 import threading
-import time
+# import time
 from queue import Queue
 
-import grpc
-from concurrent import futures
+# import grpc
+# from concurrent import futures
 
-import signalupdate_pb2
-import signalupdate_pb2_grpc
-
-
-_ONE_DAY_IN_SECONDS = 60 * 60 * 24
+# import signalupdate_pb2
+# import signalupdate_pb2_grpc
 
 
-class Servicer(signalupdate_pb2_grpc.GreeterServicer):
-    updates = Queue()
-
-    def SignalUpdate(self, request, context):
-        if not Servicer.updates.empty():
-            update_msg = Servicer.updates.get()
-            return signalupdate_pb2.UpdateReply(message=update_msg)
-        else:
-            return signalupdate_pb2.UpdateReply(message='')
+# _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
-class Greeter():
-    server = None
+# class Servicer(signalupdate_pb2_grpc.GreeterServicer):
+#     updates = Queue()
 
-    @classmethod
-    def setup(cls, grpc_port):
-        cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        signalupdate_pb2_grpc.add_GreeterServicer_to_server(Servicer(),
-                                                            cls.server)
-        port = f'[::]:{grpc_port}'
-        cls.server.add_insecure_port(port)
+#     def SignalUpdate(self, request, context):
+#         if not Servicer.updates.empty():
+#             update_msg = Servicer.updates.get()
+#             return signalupdate_pb2.UpdateReply(message=update_msg)
+#         else:
+#             return signalupdate_pb2.UpdateReply(message='')
 
-    def serve(self):
-        Greeter.server.start()
-        try:
-            while True:
-                time.sleep(_ONE_DAY_IN_SECONDS)
-        except KeyboardInterrupt:
-            Greeter.server.stop(0)
 
-    def add_update(self, message):
-        Servicer.updates.put(message)
+# class Greeter():
+#     server = None
+
+#     @classmethod
+#     def setup(cls, grpc_port):
+#         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+#         signalupdate_pb2_grpc.add_GreeterServicer_to_server(Servicer(),
+#                                                             cls.server)
+#         port = f'[::]:{grpc_port}'
+#         cls.server.add_insecure_port(port)
+
+#     def serve(self):
+#         Greeter.server.start()
+#         try:
+#             while True:
+#                 time.sleep(_ONE_DAY_IN_SECONDS)
+#         except KeyboardInterrupt:
+#             Greeter.server.stop(0)
+
+#     def add_update(self, message):
+#         Servicer.updates.put(message)
 
 
 class Server:
@@ -52,8 +52,8 @@ class Server:
 
     def __init__(self, host, port, grpc_port):
         Server.setup_socket(host, port)
-        self.grpc = Greeter()
-        Greeter.setup(grpc_port)
+        # self.grpc = Greeter()
+        # Greeter.setup(grpc_port)
         self.host = host
         self.port = port
         self.flag = True
@@ -73,15 +73,15 @@ class Server:
         recv_thread = threading.Thread(name='recv_thread',
                                        target=self.recv_cmd)
         recv_thread.start()
-        exec_thread = threading.Thread(name='process_thread',
-                                       target=self.process_cmd)
+        exec_thread = threading.Thread(name='queues_thread',
+                                       target=self.organize_queues)
         exec_thread.start()
 
-        grpc_thread = threading.Thread(name='grpc_thread',
-                                       target=self.grpc.serve)
-        grpc_thread.start()
+        # grpc_thread = threading.Thread(name='grpc_thread',
+        #                                target=self.grpc.serve)
+        # grpc_thread.start()
 
-        return recv_thread, exec_thread, grpc_thread
+        return recv_thread, exec_thread  # , grpc_thread
 
     def write_cmd_log(self, result):
         if self.log_queue.empty():
@@ -123,61 +123,66 @@ class Server:
 
             self.cmd_queue.put((addr, data))
 
-    def process_cmd(self):
+    def organize_queues(self):
         while True:
             if not self.cmd_queue.empty():
                 return
+
             self.flag = False
+
             next_cmd = self.cmd_queue.get()
             self.exec_queue.put(next_cmd)
             self.log_queue.put(next_cmd)
-            result = self.exec_cmd()
+            result = self.process_cmd()
             self.write_cmd_log(result)
+
             self.flag = True
 
-    def exec_cmd(self):
+    def process_cmd(self):
         if self.exec_queue.empty():
             return
 
-        result = ''
-        dequeue = self.exec_queue.get()
-        success = False
-        entry = dequeue[1]
+        command = self.exec_queue.get()
+        origin = command[0]
+        entry = command[1]
+
+        operation = entry[0]
         key = entry[1]
-        value = ''
-        key_exists = self.cmd_map.get(key)
+        value = entry[2] if len(entry) > 2 else ''
+        success, result = self.exec_cmd(operation, key, value)
+        print(result)
 
-        if len(entry) > 2:
-            value = entry[2]
+        # if key in self.tracked:
+        #     self.grpc.add_update(result)
+        self._sock.sendto(result.encode('utf-8'), origin)
+        self.write_map_log()
+        return success
 
-        if entry[0] == 'create' and not key_exists:
-            self.cmd_map.update({key: value})
-            success = True
+    def exec_cmd(self, operation, key, value):
+        key_in_map = self.cmd_map.get(key)
+        success = False
+        result = ''
 
-        if key_exists:
-            if entry[0] == 'read':
-                value = key_exists
-                success = True
-            elif entry[0] == 'update':
-                self.cmd_map.update({key: value})
-                success = True
-            elif entry[0] == 'delete':
-                value = key_exists
-                self.cmd_map.pop(key)
-                success = True
-
-        if entry[0] == 'track':
+        if operation == 'track' and key not in self.tracked:
             self.tracked.add(key)
             success = True
+        elif operation == 'create' and not key_in_map:
+            self.cmd_map.update({key: value})
+            success = True
+        elif operation != 'create' and key_in_map:
+            if operation == 'read':
+                value = key_in_map
+            elif operation == 'update':
+                self.cmd_map.update({key: value})
+            elif operation == 'delete':
+                value = key_in_map
+                self.cmd_map.pop(key)
+            success = True
 
-        log_entry = f'{entry[0]} {{{key}: {value}}}'
+        log_entry = f'{operation} {{{key}: {value}}}'
         if success:
             result = f'success: {log_entry}'
         else:
-            result = f'failed to {entry[0]} key {key}.'
-        print(result)
-        if key in self.tracked:
-            self.grpc.add_update(result)
-        self._sock.sendto(result.encode('utf-8'), dequeue[0])
-        self.write_map_log()
-        return success
+            result = f'failed to {operation} key {key}.'
+
+        return success, result
