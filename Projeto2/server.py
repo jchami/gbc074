@@ -142,8 +142,10 @@ class Server:
 
 class Map(crud_pb2_grpc.MapServicer):
     def __init__(self):
+        self.flag = False
         self.cmd_map = {}
         self.tracked = {}
+        self.read_map_log()
 
     def exec_cmd(self, operation, key, value):
         key_in_map = self.cmd_map.get(key)
@@ -174,6 +176,7 @@ class Map(crud_pb2_grpc.MapServicer):
 
         if key in self.tracked:
             self.tracked[key].append(result)
+            self.flag = True
         return success, result
 
     def Crud(self, request, context):
@@ -181,19 +184,29 @@ class Map(crud_pb2_grpc.MapServicer):
         key = request.key
         value = request.value
         success, result = self.exec_cmd(op, key, value)
-        self.write_log()
         return crud_pb2.CommandReply(message=result)
+        self.write_log()
 
     def Track(self, request, context):
         updates = self.tracked[request.key]
         while True:
-            for command in updates:
-                if updates:
-                    yield command
-                else:
-                    yield ''
+            if updates and self.flag:
+                for command in updates:
+                    updates.pop(0)
+                    yield crud_pb2.CommandReply(message=command)
+                self.flag = False
+            else:
+                continue
 
     def write_log(self):
         with open('map.log', 'w') as logfile:
             for key in self.cmd_map.keys():
                 logfile.write(f'{key} {self.cmd_map[key]}\n')
+
+    def read_map_log(self):
+        with open('map.log') as logfile:
+            for line in logfile:
+                line = line.split()
+                if len(line) >= 2:
+                    line[1] = ' '.join([i for i in line if line.index(i) > 0])
+                self.cmd_map.update({int(line[0]): line[1]})

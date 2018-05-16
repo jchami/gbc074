@@ -58,7 +58,7 @@ def run():
         if name == 'track':
             key = process_key()
             stub.Crud(crud_pb2.CommandRequest(name=name, key=key))
-            responses = stub.Track(crud_pb2.CommandRequest(key=key))
+            responses = stub.Track(crud_pb2.TrackReq(key=key))
         if response and name != 'track':
             print(response.message)
         elif responses:
