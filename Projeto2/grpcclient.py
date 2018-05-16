@@ -42,6 +42,8 @@ def process_cmd():
 
 
 def run():
+    responses = None
+    response = ''
     while True:
         name = process_cmd()
         if name in ['read', 'delete']:
@@ -50,11 +52,18 @@ def run():
         if name in ['create', 'update']:
             key = process_key()
             value = process_value()
-            response = stub.Crud(crud_pb2.CommandRequest(name=name, key=key, value=value))
+            response = stub.Crud(crud_pb2.CommandRequest(name=name,
+                                                         key=key,
+                                                         value=value))
         if name == 'track':
-            response = stub.Crud(crud_pb2.CommandRequest(name=name))
-        if response.message:
+            key = process_key()
+            stub.Crud(crud_pb2.CommandRequest(name=name, key=key))
+            responses = stub.Track(crud_pb2.CommandRequest(key=key))
+        if response and name != 'track':
             print(response.message)
+        elif responses:
+            for reply in responses:
+                print(reply.message)
 
 
 if __name__ == '__main__':

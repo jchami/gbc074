@@ -19,6 +19,11 @@ class MapStub(object):
         request_serializer=crud__pb2.CommandRequest.SerializeToString,
         response_deserializer=crud__pb2.CommandReply.FromString,
         )
+    self.Track = channel.unary_stream(
+        '/helloworld.Map/Track',
+        request_serializer=crud__pb2.TrackReq.SerializeToString,
+        response_deserializer=crud__pb2.CommandReply.FromString,
+        )
 
 
 class MapServicer(object):
@@ -32,12 +37,24 @@ class MapServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def Track(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_MapServicer_to_server(servicer, server):
   rpc_method_handlers = {
       'Crud': grpc.unary_unary_rpc_method_handler(
           servicer.Crud,
           request_deserializer=crud__pb2.CommandRequest.FromString,
+          response_serializer=crud__pb2.CommandReply.SerializeToString,
+      ),
+      'Track': grpc.unary_stream_rpc_method_handler(
+          servicer.Track,
+          request_deserializer=crud__pb2.TrackReq.FromString,
           response_serializer=crud__pb2.CommandReply.SerializeToString,
       ),
   }

@@ -4,6 +4,11 @@ package helloworld;
 
 service Map {
   rpc Crud (CommandRequest) returns (CommandReply) {}
+  rpc Track(TrackReq) returns (stream CommandReply) {}
+}
+
+message TrackReq {
+    uint32 key = 1;
 }
 
 message CommandRequest {

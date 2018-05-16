@@ -21,8 +21,7 @@ class gRPC_server():
     @classmethod
     def setup(cls, grpc_port):
         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        crud_pb2_grpc.add_MapServicer_to_server(Map(),
-                                                            cls.server)
+        crud_pb2_grpc.add_MapServicer_to_server(Map(), cls.server)
         port = f'[::]:{grpc_port}'
         cls.server.add_insecure_port(port)
 
@@ -144,6 +143,7 @@ class Server:
 class Map(crud_pb2_grpc.MapServicer):
     def __init__(self):
         self.cmd_map = {}
+        self.tracked = {}
 
     def exec_cmd(self, operation, key, value):
         key_in_map = self.cmd_map.get(key)
@@ -151,7 +151,7 @@ class Map(crud_pb2_grpc.MapServicer):
         result = ''
 
         if operation == 'track' and key not in self.tracked:
-            self.tracked.add(key)
+            self.tracked.update({key: []})
             success = True
         elif operation == 'create' and not key_in_map:
             self.cmd_map.update({key: value})
@@ -172,6 +172,8 @@ class Map(crud_pb2_grpc.MapServicer):
         else:
             result = f'failed to {operation} key {key}.'
 
+        if key in self.tracked:
+            self.tracked[key].append(result)
         return success, result
 
     def Crud(self, request, context):
@@ -181,6 +183,15 @@ class Map(crud_pb2_grpc.MapServicer):
         success, result = self.exec_cmd(op, key, value)
         self.write_log()
         return crud_pb2.CommandReply(message=result)
+
+    def Track(self, request, context):
+        updates = self.tracked[request.key]
+        while True:
+            for command in updates:
+                if updates:
+                    yield command
+                else:
+                    yield ''
 
     def write_log(self):
         with open('map.log', 'w') as logfile:

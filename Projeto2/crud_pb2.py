@@ -19,10 +19,41 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='crud.proto',
   package='helloworld',
   syntax='proto3',
-  serialized_pb=_b('\n\ncrud.proto\x12\nhelloworld\":\n\x0e\x43ommandRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03key\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\t\"\x1f\n\x0c\x43ommandReply\x12\x0f\n\x07message\x18\x01 \x01(\t2E\n\x03Map\x12>\n\x04\x43rud\x12\x1a.helloworld.CommandRequest\x1a\x18.helloworld.CommandReply\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\ncrud.proto\x12\nhelloworld\"\x17\n\x08TrackReq\x12\x0b\n\x03key\x18\x01 \x01(\r\":\n\x0e\x43ommandRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03key\x18\x02 \x01(\r\x12\r\n\x05value\x18\x03 \x01(\t\"\x1f\n\x0c\x43ommandReply\x12\x0f\n\x07message\x18\x01 \x01(\t2\x82\x01\n\x03Map\x12>\n\x04\x43rud\x12\x1a.helloworld.CommandRequest\x1a\x18.helloworld.CommandReply\"\x00\x12;\n\x05Track\x12\x14.helloworld.TrackReq\x1a\x18.helloworld.CommandReply\"\x00\x30\x01\x62\x06proto3')
 )
 
 
+
+
+_TRACKREQ = _descriptor.Descriptor(
+  name='TrackReq',
+  full_name='helloworld.TrackReq',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='helloworld.TrackReq.key', index=0,
+      number=1, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=26,
+  serialized_end=49,
+)
 
 
 _COMMANDREQUEST = _descriptor.Descriptor(
@@ -65,8 +96,8 @@ _COMMANDREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=26,
-  serialized_end=84,
+  serialized_start=51,
+  serialized_end=109,
 )
 
 
@@ -96,13 +127,21 @@ _COMMANDREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=86,
-  serialized_end=117,
+  serialized_start=111,
+  serialized_end=142,
 )
 
+DESCRIPTOR.message_types_by_name['TrackReq'] = _TRACKREQ
 DESCRIPTOR.message_types_by_name['CommandRequest'] = _COMMANDREQUEST
 DESCRIPTOR.message_types_by_name['CommandReply'] = _COMMANDREPLY
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+TrackReq = _reflection.GeneratedProtocolMessageType('TrackReq', (_message.Message,), dict(
+  DESCRIPTOR = _TRACKREQ,
+  __module__ = 'crud_pb2'
+  # @@protoc_insertion_point(class_scope:helloworld.TrackReq)
+  ))
+_sym_db.RegisterMessage(TrackReq)
 
 CommandRequest = _reflection.GeneratedProtocolMessageType('CommandRequest', (_message.Message,), dict(
   DESCRIPTOR = _COMMANDREQUEST,
@@ -126,8 +165,8 @@ _MAP = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=119,
-  serialized_end=188,
+  serialized_start=145,
+  serialized_end=275,
   methods=[
   _descriptor.MethodDescriptor(
     name='Crud',
@@ -135,6 +174,15 @@ _MAP = _descriptor.ServiceDescriptor(
     index=0,
     containing_service=None,
     input_type=_COMMANDREQUEST,
+    output_type=_COMMANDREPLY,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='Track',
+    full_name='helloworld.Map.Track',
+    index=1,
+    containing_service=None,
+    input_type=_TRACKREQ,
     output_type=_COMMANDREPLY,
     options=None,
   ),
