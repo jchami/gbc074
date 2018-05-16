@@ -1,50 +1,62 @@
 import socket
 import threading
-# import time
+import time
 from queue import Queue
 
-# import grpc
-# from concurrent import futures
+import grpc
+from concurrent import futures
 
-# import signalupdate_pb2
-# import signalupdate_pb2_grpc
+import signalupdate_pb2
+import signalupdate_pb2_grpc
 
-
-# _ONE_DAY_IN_SECONDS = 60 * 60 * 24
-
-
-# class Servicer(signalupdate_pb2_grpc.GreeterServicer):
-#     updates = Queue()
-
-#     def SignalUpdate(self, request, context):
-#         if not Servicer.updates.empty():
-#             update_msg = Servicer.updates.get()
-#             return signalupdate_pb2.UpdateReply(message=update_msg)
-#         else:
-#             return signalupdate_pb2.UpdateReply(message='')
+_ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
-# class Greeter():
-#     server = None
+class Servicer(signalupdate_pb2_grpc.GreeterServicer):
+    updates = Queue()
 
-#     @classmethod
-#     def setup(cls, grpc_port):
-#         cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-#         signalupdate_pb2_grpc.add_GreeterServicer_to_server(Servicer(),
-#                                                             cls.server)
-#         port = f'[::]:{grpc_port}'
-#         cls.server.add_insecure_port(port)
+    def SignalUpdate(self, request, context):
+        if request.name == 'read':
+            print(request.key)
+            return signalupdate_pb2.UpdateReply(message=str(request.key))
+        if request.name == 'update':
+            print(request.value)
+            return signalupdate_pb2.UpdateReply(message=str(request.value))
+        if request.name == 'delete':
+            print(request.key)
+            return signalupdate_pb2.UpdateReply(message=str(request.key))
+        if request.name == 'create':
+            print(request.value)
+            return signalupdate_pb2.UpdateReply(message=str(request.value))
+        if request.name == 'track':
+            if not Servicer.updates.empty():
+                update_msg = Servicer.updates.get()
+                return signalupdate_pb2.UpdateReply(message=update_msg)
+            else:
+                return signalupdate_pb2.UpdateReply(message='')
 
-#     def serve(self):
-#         Greeter.server.start()
-#         try:
-#             while True:
-#                 time.sleep(_ONE_DAY_IN_SECONDS)
-#         except KeyboardInterrupt:
-#             Greeter.server.stop(0)
 
-#     def add_update(self, message):
-#         Servicer.updates.put(message)
+class Greeter():
+    server = None
+
+    @classmethod
+    def setup(cls, grpc_port):
+        cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        signalupdate_pb2_grpc.add_GreeterServicer_to_server(Servicer(),
+                                                            cls.server)
+        port = f'[::]:{grpc_port}'
+        cls.server.add_insecure_port(port)
+
+    def serve(self):
+        Greeter.server.start()
+        try:
+            while True:
+                time.sleep(_ONE_DAY_IN_SECONDS)
+        except KeyboardInterrupt:
+            Greeter.server.stop(0)
+
+    def add_update(self, message):
+        Servicer.updates.put(message)
 
 
 class Server:
@@ -52,8 +64,8 @@ class Server:
 
     def __init__(self, host, port, grpc_port):
         Server.setup_socket(host, port)
-        # self.grpc = Greeter()
-        # Greeter.setup(grpc_port)
+        self.grpc = Greeter()
+        Greeter.setup(grpc_port)
         self.host = host
         self.port = port
         self.flag = True
@@ -77,11 +89,11 @@ class Server:
                                        target=self.organize_queues)
         exec_thread.start()
 
-        # grpc_thread = threading.Thread(name='grpc_thread',
-        #                                target=self.grpc.serve)
-        # grpc_thread.start()
+        grpc_thread = threading.Thread(name='grpc_thread',
+                                       target=self.grpc.serve)
+        grpc_thread.start()
 
-        return recv_thread, exec_thread  # , grpc_thread
+        return recv_thread, exec_thread, grpc_thread
 
     def write_cmd_log(self, result):
         if self.log_queue.empty():
@@ -152,8 +164,8 @@ class Server:
         success, result = self.exec_cmd(operation, key, value)
         print(result)
 
-        # if key in self.tracked:
-        #     self.grpc.add_update(result)
+        if key in self.tracked:
+            self.grpc.add_update(result)
         self._sock.sendto(result.encode('utf-8'), origin)
         self.write_map_log()
         return success
