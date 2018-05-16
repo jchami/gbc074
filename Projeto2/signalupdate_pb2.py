@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='signalupdate.proto',
   package='helloworld',
   syntax='proto3',
-  serialized_pb=_b('\n\x12signalupdate.proto\x12\nhelloworld\"\x1d\n\rUpdateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x1e\n\x0bUpdateReply\x12\x0f\n\x07message\x18\x01 \x01(\t2O\n\x07Greeter\x12\x44\n\x0cSignalUpdate\x12\x19.helloworld.UpdateRequest\x1a\x17.helloworld.UpdateReply\"\x00\x42\x36\n\x1bio.grpc.examples.helloworldB\x0fHelloWorldProtoP\x01\xa2\x02\x03HLWb\x06proto3')
+  serialized_pb=_b('\n\x12signalupdate.proto\x12\nhelloworld\"9\n\rUpdateRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03key\x18\x02 \x01(\x02\x12\r\n\x05value\x18\x03 \x01(\t\"\x1e\n\x0bUpdateReply\x12\x0f\n\x07message\x18\x01 \x01(\t2O\n\x07Greeter\x12\x44\n\x0cSignalUpdate\x12\x19.helloworld.UpdateRequest\x1a\x17.helloworld.UpdateReply\"\x00\x62\x06proto3')
 )
 
 
@@ -39,6 +39,20 @@ _UPDATEREQUEST = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='key', full_name='helloworld.UpdateRequest.key', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='helloworld.UpdateRequest.value', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -52,7 +66,7 @@ _UPDATEREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=34,
-  serialized_end=63,
+  serialized_end=91,
 )
 
 
@@ -82,8 +96,8 @@ _UPDATEREPLY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=65,
-  serialized_end=95,
+  serialized_start=93,
+  serialized_end=123,
 )
 
 DESCRIPTOR.message_types_by_name['UpdateRequest'] = _UPDATEREQUEST
@@ -105,8 +119,6 @@ UpdateReply = _reflection.GeneratedProtocolMessageType('UpdateReply', (_message.
 _sym_db.RegisterMessage(UpdateReply)
 
 
-DESCRIPTOR.has_options = True
-DESCRIPTOR._options = _descriptor._ParseOptions(descriptor_pb2.FileOptions(), _b('\n\033io.grpc.examples.helloworldB\017HelloWorldProtoP\001\242\002\003HLW'))
 
 _GREETER = _descriptor.ServiceDescriptor(
   name='Greeter',
@@ -114,8 +126,8 @@ _GREETER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=97,
-  serialized_end=176,
+  serialized_start=125,
+  serialized_end=204,
   methods=[
   _descriptor.MethodDescriptor(
     name='SignalUpdate',
