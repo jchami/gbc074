@@ -2,36 +2,10 @@ import socket
 import threading
 from queue import Queue
 
-import time
-import grpc
-from concurrent import futures
-
-import crud_pb2
-import crud_pb2_grpc
+from dictmap import Map
+from grpcserver import RemoteServer
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
-
-
-class gRPC_server():
-    server = None
-
-    def __init__(self, grpc_port):
-        gRPC_server.setup(grpc_port)
-
-    @classmethod
-    def setup(cls, grpc_port):
-        cls.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-        crud_pb2_grpc.add_MapServicer_to_server(Map(), cls.server)
-        port = f'[::]:{grpc_port}'
-        cls.server.add_insecure_port(port)
-
-    def serve(self):
-        gRPC_server.server.start()
-        try:
-            while True:
-                time.sleep(_ONE_DAY_IN_SECONDS)
-        except KeyboardInterrupt:
-            gRPC_server.server.stop(0)
 
 
 class Server:
@@ -39,15 +13,19 @@ class Server:
 
     def __init__(self, host='localhost', port=8000, grpc_port=50051):
         Server.setup_socket(host, port)
-        self.grpc = gRPC_server(grpc_port)
+        self.cmd_map = Map()
+        self.grpc = RemoteServer(self.cmd_map, grpc_port)
+        self.flag = True
+
         self.host = host
         self.port = port
-        self.flag = True
+
         self.cmd_queue = Queue()
         self.exec_queue = Queue()
         self.log_queue = Queue()
+
         self.tracked = set()
-        self.cmd_map = Map()
+
         self.read_map_log()
 
     @classmethod
@@ -133,80 +111,6 @@ class Server:
         success, result = self.cmd_map.exec_cmd(operation, key, value)
         print(result)
 
-        if key in self.tracked:
-            self.grpc.add_update(result)
         self._sock.sendto(result.encode('utf-8'), origin)
         self.cmd_map.write_log()
         return success
-
-
-class Map(crud_pb2_grpc.MapServicer):
-    def __init__(self):
-        self.flag = False
-        self.cmd_map = {}
-        self.tracked = {}
-        self.read_map_log()
-
-    def exec_cmd(self, operation, key, value):
-        key_in_map = self.cmd_map.get(key)
-        success = False
-        result = ''
-
-        if operation == 'track' and key not in self.tracked:
-            self.tracked.update({key: []})
-            success = True
-        elif operation == 'create' and not key_in_map:
-            self.cmd_map.update({key: value})
-            success = True
-        elif operation != 'create' and key_in_map:
-            if operation == 'read':
-                value = key_in_map
-            elif operation == 'update':
-                self.cmd_map.update({key: value})
-            elif operation == 'delete':
-                value = key_in_map
-                self.cmd_map.pop(key)
-            success = True
-
-        log_entry = f'{operation} {{{key}: {value}}}'
-        if success:
-            result = f'success: {log_entry}'
-        else:
-            result = f'failed to {operation} key {key}.'
-
-        if key in self.tracked:
-            self.tracked[key].append(result)
-            self.flag = True
-        return success, result
-
-    def Crud(self, request, context):
-        op = request.name
-        key = request.key
-        value = request.value
-        success, result = self.exec_cmd(op, key, value)
-        return crud_pb2.CommandReply(message=result)
-        self.write_log()
-
-    def Track(self, request, context):
-        updates = self.tracked[request.key]
-        while True:
-            if updates and self.flag:
-                for command in updates:
-                    updates.pop(0)
-                    yield crud_pb2.CommandReply(message=command)
-                self.flag = False
-            else:
-                continue
-
-    def write_log(self):
-        with open('map.log', 'w') as logfile:
-            for key in self.cmd_map.keys():
-                logfile.write(f'{key} {self.cmd_map[key]}\n')
-
-    def read_map_log(self):
-        with open('map.log') as logfile:
-            for line in logfile:
-                line = line.split()
-                if len(line) >= 2:
-                    line[1] = ' '.join([i for i in line if line.index(i) > 0])
-                self.cmd_map.update({int(line[0]): line[1]})
