@@ -92,8 +92,8 @@ class Server:
         for i in range(0, Server._SETTINGS["NO_OF_SNAPSHOTS"]):
             self.write_snapshot(f'./Snapshots/snap{i+1}.log')
 
-        print("Snapshots saved.")
-        input()
+        # print("Snapshots saved.")
+        # input()
         with open('cmd.log', 'w') as logfile:
             logfile.write('')
 
